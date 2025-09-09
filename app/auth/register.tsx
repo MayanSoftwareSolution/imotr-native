@@ -63,11 +63,6 @@ export default function RegisterScreen() {
         password,
       });
 
-      // 2) Request magic link for first login
-      const res = await authApi.requestMagicLink(email);
-      if (res.token) await SecureStore.setItemAsync('magic_plain', String(res.token));
-      if (res.expires_at) await SecureStore.setItemAsync('magic_expires_at', String(res.expires_at));
-
       // 3) Persist the email + UX flag
       await SecureStore.setItemAsync('magic_email', email.trim().toLowerCase());
       await SecureStore.setItemAsync('recently_registered', '1');
@@ -89,20 +84,17 @@ export default function RegisterScreen() {
     <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-950">
       <KeyboardAvoidingView
         className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           className="flex-1"
           contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-        >
+          keyboardShouldPersistTaps="handled">
           <View className="flex-1 justify-center px-6">
             {/* Brand header */}
             <View className="mb-10 items-center">
               <View
                 className="h-16 w-16 items-center justify-center rounded-2xl"
-                style={{ backgroundColor: '#19B89A' }}
-              >
+                style={{ backgroundColor: '#19B89A' }}>
                 <Text className="text-2xl font-bold text-white">i</Text>
               </View>
               <Text className="mt-4 text-2xl font-semibold text-slate-900 dark:text-white">
@@ -166,8 +158,7 @@ export default function RegisterScreen() {
                     setLanguage(next.value);
                   }}
                   className="rounded-xl px-3 py-1"
-                  style={{ backgroundColor: '#E2E8F0' }}
-                >
+                  style={{ backgroundColor: '#E2E8F0' }}>
                   <Text className="text-xs text-slate-700">Change</Text>
                 </Pressable>
               </View>
@@ -207,8 +198,7 @@ export default function RegisterScreen() {
               className={`mt-4 h-12 items-center justify-center rounded-2xl ${
                 !valid || submitting ? 'opacity-60' : ''
               }`}
-              style={{ backgroundColor: '#19B89A' }}
-            >
+              style={{ backgroundColor: '#19B89A' }}>
               {submitting ? (
                 <ActivityIndicator color="#fff" />
               ) : (
