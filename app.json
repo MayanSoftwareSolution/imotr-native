@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "newArchEnabled": true,
+    "name": "Imotr",
+    "slug": "imotr",
+    "version": "1.0.0",
+    "runtimeVersion": "1.0.0",
+    "scheme": "imotr",
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "experiments": {
+      "tsconfigPaths": true
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ],
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/imotr-splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "softwareKeyboardLayoutMode": "pan"
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "11853cd2-a6e3-4b02-8a81-29938150b8a1"
+      }
+    },
+    "owner": "mayansoftwaresolutions",
+    "updates": {
+      "url": "https://u.expo.dev/11853cd2-a6e3-4b02-8a81-29938150b8a1"
+    }
+  }
+}
