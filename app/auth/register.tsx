@@ -1,4 +1,3 @@
-// app/auth/register.tsx
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React, { useEffect, useMemo, useState } from 'react';

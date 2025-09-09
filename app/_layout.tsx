@@ -33,8 +33,7 @@ function RouterStack() {
 
     const inAuth = segments[0] === 'auth';
     const section = segments.length > 1 ? segments[1] : undefined; // 'login' | 'check-email' | 'verify-email'
-    const isVerificationRoute =
-      inAuth && (section === 'verify-email' || section === 'check-email');
+    const isVerificationRoute = inAuth && (section === 'verify-email' || section === 'check-email');
 
     if (!token) {
       // Not logged in: keep all /auth/* accessible, force others to /auth/login
@@ -52,7 +51,6 @@ function RouterStack() {
     if (verified === true && inAuth) {
       // Verified + in /auth/*? Send to app shell
       router.replace('/(tabs)');
-      return;
     }
     // Else (verified user on app routes): do nothing
   }, [token, loading, verified, segments, router]);
@@ -72,8 +70,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView
       className={`bg-light-primary dark:bg-dark-primary ${Platform.OS === 'ios' ? 'pb-0 ' : ''}`}
-      style={{ flex: 1 }}
-    >
+      style={{ flex: 1 }}>
       <BusinessModeProvider>
         <ThemeProvider>
           <AuthProvider>
