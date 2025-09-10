@@ -5,6 +5,7 @@ import * as SecureStore from 'expo-secure-store';
 import React, { useEffect, useState, useCallback } from 'react';
 import { SafeAreaView, View, Text, Pressable, Alert, ActivityIndicator } from 'react-native';
 
+import BrandBackdrop from '@/src/components/BrandBackdrop';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { authApi } from '@/src/services/auth';
 
@@ -109,16 +110,19 @@ export default function CheckEmailScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-950">
+      <BrandBackdrop cover={0.5} strength={0.22} />
       <View className="flex-1 items-center justify-center px-6">
         <Text className="mb-2 text-2xl font-semibold text-slate-900 dark:text-white">
           Check your email
         </Text>
         <Text className="text-center text-slate-600 dark:text-slate-300">
           We sent you a secure sign-in link{email ? ' to ' : ' '}
-          <Text className="font-semibold text-slate-900 dark:text-white">
-            {email ?? 'your email'}
-          </Text>
-          . Open your mailbox and tap the link to continue.
+        </Text>
+        <Text className="font-semibold text-slate-900 dark:text-white">
+          {email ?? 'your email'}
+        </Text>
+        <Text className="text-center text-slate-600 dark:text-slate-300">
+          Open your mailbox and tap the link to continue.
         </Text>
 
         {/* "Not you?" link */}

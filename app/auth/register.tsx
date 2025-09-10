@@ -15,6 +15,7 @@ import {
 
 import { authApi } from '@/src/services/auth';
 import { resourcesApi, type Language } from '@/src/services/resources';
+import BrandBackdrop from '@/src/components/BrandBackdrop';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -81,6 +82,7 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-950">
+      <BrandBackdrop cover={0.5} strength={0.22} />
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -92,9 +94,9 @@ export default function RegisterScreen() {
             {/* Brand header */}
             <View className="mb-10 items-center">
               <View
-                className="h-16 w-16 items-center justify-center rounded-2xl"
+                className="h-28 w-28 items-center justify-center rounded-2xl"
                 style={{ backgroundColor: '#19B89A' }}>
-                <Text className="text-2xl font-bold text-white">i</Text>
+                <Text className="text-3xl font-bold text-white">iMotr</Text>
               </View>
               <Text className="mt-4 text-2xl font-semibold text-slate-900 dark:text-white">
                 Create your account
@@ -106,7 +108,7 @@ export default function RegisterScreen() {
 
             {/* Name */}
             <View className="mb-3">
-              <Text className="mb-2 text-sm text-slate-600 dark:text-slate-300">Full name</Text>
+              <Text className="mb-2 ml-2 text-sm font-semibold text-slate-600 dark:text-slate-300">Full name</Text>
               <View className="h-12 flex-row items-center rounded-2xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
                 <TextInput
                   className="flex-1 text-slate-900 dark:text-white"
@@ -123,7 +125,7 @@ export default function RegisterScreen() {
 
             {/* Email */}
             <View className="mb-3">
-              <Text className="mb-2 text-sm text-slate-600 dark:text-slate-300">Email</Text>
+              <Text className="mb-2 ml-2 text-sm font-semibold text-slate-600 dark:text-slate-300">Email</Text>
               <View className="h-12 flex-row items-center rounded-2xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
                 <TextInput
                   className="flex-1 text-slate-900 dark:text-white"
@@ -144,7 +146,7 @@ export default function RegisterScreen() {
 
             {/* Language */}
             <View className="mb-3">
-              <Text className="mb-2 text-sm text-slate-600 dark:text-slate-300">Language</Text>
+              <Text className="mb-2 ml-2 text-sm font-semibold text-slate-600 dark:text-slate-300">Language</Text>
               <View className="h-12 flex-row items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
                 <Text className="text-slate-900 dark:text-white">
                   {langs.find((l) => l.value === language)?.label ?? language.toUpperCase()}
@@ -168,7 +170,7 @@ export default function RegisterScreen() {
 
             {/* Password */}
             <View className="mb-2">
-              <Text className="mb-2 text-sm text-slate-600 dark:text-slate-300">Password</Text>
+              <Text className="mb-2 ml-2 text-sm font-semibold text-slate-600 dark:text-slate-300">Password</Text>
               <View className="h-12 flex-row items-center rounded-2xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
                 <TextInput
                   className="flex-1 text-slate-900 dark:text-white"

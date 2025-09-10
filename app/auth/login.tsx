@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 
+import BrandBackdrop from '@/src/components/BrandBackdrop';
 import { authApi } from '@/src/services/auth';
 
 export default function LoginScreen() {
@@ -58,6 +59,7 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-950">
+      <BrandBackdrop cover={0.5} strength={0.22} />
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -69,9 +71,9 @@ export default function LoginScreen() {
             {/* Brand header */}
             <View className="mb-10 items-center">
               <View
-                className="h-16 w-16 items-center justify-center rounded-2xl"
+                className="h-28 w-28 items-center justify-center rounded-2xl"
                 style={{ backgroundColor: '#19B89A' }}>
-                <Text className="text-2xl font-bold text-white">i</Text>
+                <Text className="text-3xl font-bold text-white">iMotr</Text>
               </View>
               <Text className="mt-4 text-2xl font-semibold text-slate-900 dark:text-white">
                 Sign in with email
@@ -83,12 +85,14 @@ export default function LoginScreen() {
 
             {/* Email field */}
             <View className="mb-2">
-              <Text className="mb-2 text-sm text-slate-600 dark:text-slate-300">Email</Text>
+              <Text className="mb-2 ml-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                Email Address
+              </Text>
               <View className="h-12 flex-row items-center rounded-2xl border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
                 <Mail size={20} color="#94a3b8" />
                 <TextInput
                   className="ml-2 flex-1 text-slate-900 dark:text-white"
-                  placeholder="you@imotr.app"
+                  placeholder="johnsmith@imotr.com"
                   placeholderTextColor="#94a3b8"
                   keyboardType="email-address"
                   autoCapitalize="none"
@@ -121,7 +125,7 @@ export default function LoginScreen() {
               {submitting ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text className="text-base font-semibold text-white">Sign In With Email</Text>
+                <Text className="text-base font-semibold text-white">Sign In</Text>
               )}
             </Pressable>
 

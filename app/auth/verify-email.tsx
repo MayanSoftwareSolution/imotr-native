@@ -4,11 +4,16 @@ import * as SecureStore from 'expo-secure-store';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView, View, Text, TextInput, Pressable, ActivityIndicator } from 'react-native';
 
+import BrandBackdrop from '@/src/components/BrandBackdrop';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { authApi } from '@/src/services/auth';
 
 const CODE_LENGTH = 6;
 const BRAND = '#19B89A';
+
+// Persisted cooldown (optional, but nice UX)
+const LAST_SENT_KEY = 'verify_email_last_sent_at';
+const COOLDOWN_SECONDS = 60;
 
 export default function VerifyEmailScreen() {
   const router = useRouter();
@@ -22,7 +27,14 @@ export default function VerifyEmailScreen() {
 
   const inputRef = useRef<TextInput>(null);
 
-  // Load the email we stored at registration / login
+  // Submission guards
+  const submittingRef = useRef(false);
+  const lastTriedCodeRef = useRef<string | null>(null);
+  useEffect(() => {
+    submittingRef.current = submitting;
+  }, [submitting]);
+
+  // Load stored email
   useEffect(() => {
     (async () => {
       const e = await SecureStore.getItemAsync('magic_email');
@@ -30,19 +42,23 @@ export default function VerifyEmailScreen() {
     })();
   }, []);
 
-  // Auto-send verification code on mount
-  useEffect(() => {
-    (async () => {
-      try {
-        await authApi.requestEmailVerification();
-        setCooldown(60);
-      } catch {
-        // ignore first try error; user can tap Resend
-      }
-    })();
+  // Restore cooldown from previous "Resend" (NO network call here)
+  const computeRemaining = useCallback(async () => {
+    const last = await SecureStore.getItemAsync(LAST_SENT_KEY);
+    if (!last) return 0;
+    const lastMs = parseInt(last, 10) || 0;
+    const elapsed = Math.floor((Date.now() - lastMs) / 1000);
+    return Math.max(0, COOLDOWN_SECONDS - elapsed);
   }, []);
 
-  // Cooldown timer
+  useEffect(() => {
+    (async () => {
+      const remaining = await computeRemaining();
+      setCooldown(remaining);
+    })();
+  }, [computeRemaining]);
+
+  // Cooldown ticker
   useEffect(() => {
     if (cooldown <= 0) return;
     const id = setInterval(() => setCooldown((s) => (s > 0 ? s - 1 : 0)), 1000);
@@ -51,55 +67,60 @@ export default function VerifyEmailScreen() {
 
   const canSubmit = useMemo(() => /^\d{6}$/.test(code), [code]);
 
+  // Only this triggers a new code
   const handleResend = useCallback(async () => {
     if (cooldown > 0) return;
     setErrorMsg(null);
     try {
       await authApi.requestEmailVerification();
-      setCooldown(60);
+      await SecureStore.setItemAsync(LAST_SENT_KEY, String(Date.now()));
+      setCooldown(COOLDOWN_SECONDS);
     } catch (e: any) {
       setErrorMsg(e?.data?.message ?? 'Could not resend code. Try again.');
     }
   }, [cooldown]);
 
-  const handleSubmit = useCallback(async () => {
-    if (!canSubmit || submitting) return;
-    setSubmitting(true);
-    setErrorMsg(null);
-    try {
-      // Backend expects integer code
-      const numeric = Number(code);
-      await authApi.submitEmailVerification(numeric);
+  const submitCode = useCallback(
+    async (currentCode: string) => {
+      if (currentCode.length !== CODE_LENGTH) return;
+      if (submittingRef.current) return;
+      if (lastTriedCodeRef.current === currentCode) return; // no duplicate auto-submit
 
-      // Mark verified before navigating to avoid “flash”
-      setVerified(true);
+      lastTriedCodeRef.current = currentCode;
+      setSubmitting(true);
+      setErrorMsg(null);
 
-      // Optional: clean temporary flags
-      await SecureStore.deleteItemAsync('recently_registered').catch(() => {});
+      try {
+        // Send STRING to preserve leading zeros
+        await authApi.submitEmailVerification(currentCode);
 
-      router.replace('/(tabs)');
-    } catch (e: any) {
-      const status = e?.status ?? 0;
-      const msg = e?.data?.message;
-      if (status === 422) setErrorMsg(msg ?? 'Invalid code. Please check and try again.');
-      else if (status === 429) setErrorMsg(msg ?? 'Too many attempts. Try again soon.');
-      else setErrorMsg(msg ?? 'Verification failed. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  }, [canSubmit, submitting, code, router, setVerified]);
+        setVerified(true);
+        await SecureStore.deleteItemAsync('recently_registered').catch(() => {});
+        router.replace('/(tabs)');
+      } catch (e: any) {
+        const status = e?.status ?? 0;
+        const msg = e?.data?.message;
+        if (status === 422) setErrorMsg(msg ?? 'Invalid code. Please check and try again.');
+        else if (status === 429) setErrorMsg(msg ?? 'Too many attempts. Try again soon.');
+        else setErrorMsg(msg ?? 'Verification failed. Please try again.');
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [router, setVerified]
+  );
 
-  // Auto-submit when 6 digits entered
+  // Auto-submit once per unique 6-digit code
   useEffect(() => {
     if (canSubmit && !submitting) {
-      const id = setTimeout(() => handleSubmit(), 75);
+      const id = setTimeout(() => submitCode(code), 120);
       return () => clearTimeout(id);
     }
-  }, [canSubmit, submitting, handleSubmit]);
+  }, [canSubmit, submitting, code, submitCode]);
 
   const onNotYou = useCallback(async () => {
     try {
-      await logout(); // revoke token + clear storage
+      await logout();
       await SecureStore.deleteItemAsync('magic_email').catch(() => {});
       await SecureStore.deleteItemAsync('magic_plain').catch(() => {});
       await SecureStore.deleteItemAsync('magic_expires_at').catch(() => {});
@@ -111,6 +132,7 @@ export default function VerifyEmailScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-950">
+      <BrandBackdrop cover={0.5} strength={0.22} />
       <View className="flex-1 items-center justify-center px-6">
         {/* Brand badge */}
         <View className="mb-6 items-center">
@@ -129,14 +151,9 @@ export default function VerifyEmailScreen() {
           <Text className="font-semibold">{email ?? 'your email'}</Text>
         </Text>
 
-        {/* Code input */}
-        <Pressable
-          onPress={() => inputRef.current?.focus()}
-          className="w-full items-center"  // center children horizontally
-        >
-          <View
-            className="mb-3 flex-row justify-center self-center gap-2" // self-center > RN-friendly
-          >
+        {/* Code input display */}
+        <Pressable onPress={() => inputRef.current?.focus()} className="w-full items-center">
+          <View className="mb-3 flex-row justify-center gap-2 self-center">
             {Array.from({ length: CODE_LENGTH }).map((_, i) => {
               const char = code[i] ?? '';
               const isActive = i === code.length;
@@ -145,8 +162,7 @@ export default function VerifyEmailScreen() {
                   key={i}
                   className={`h-12 w-10 items-center justify-center rounded-xl border ${
                     isActive ? 'border-emerald-500' : 'border-slate-300 dark:border-slate-700'
-                  } bg-white dark:bg-slate-900`}
-                >
+                  } bg-white dark:bg-slate-900`}>
                   <Text className="text-lg font-semibold text-slate-900 dark:text-white">
                     {char ? '•' : ''}
                   </Text>
@@ -156,16 +172,19 @@ export default function VerifyEmailScreen() {
           </View>
         </Pressable>
 
-
         {/* Hidden real input */}
         <TextInput
           ref={inputRef}
           keyboardType="number-pad"
+          textContentType="oneTimeCode"
+          autoComplete="one-time-code"
           value={code}
           onChangeText={(t) => {
-            // digits only, max 6
             const cleaned = t.replace(/\D+/g, '').slice(0, CODE_LENGTH);
             setCode(cleaned);
+            if (cleaned.length < CODE_LENGTH) {
+              lastTriedCodeRef.current = null; // allow re-auto-submit if user edits
+            }
             if (errorMsg) setErrorMsg(null);
           }}
           autoFocus
@@ -196,7 +215,7 @@ export default function VerifyEmailScreen() {
           </Pressable>
 
           <Pressable
-            onPress={handleSubmit}
+            onPress={() => submitCode(code)}
             disabled={!canSubmit || submitting}
             className={`rounded-xl px-4 py-2 ${!canSubmit || submitting ? 'opacity-60' : ''}`}
             style={{ backgroundColor: BRAND }}>
