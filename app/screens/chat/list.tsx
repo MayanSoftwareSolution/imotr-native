@@ -46,7 +46,7 @@ const mockChats: ChatUser[] = [
 export default function ChatListScreen() {
   const renderChatItem = ({ item }: { item: ChatUser }) => (
     <Link href={`/screens/chat/${item.id}`} asChild>
-      <TouchableOpacity 
+      <TouchableOpacity
         className={`flex-row items-center p-4 border-b border-light-secondary dark:border-dark-secondary ${item.unread ? 'bg-light-secondary/10 dark:bg-dark-secondary/10' : ''}`}
       >
         <Avatar
@@ -64,8 +64,8 @@ export default function ChatListScreen() {
             </ThemedText>
           </View>
           <View className="flex-row items-center mt-1">
-            <ThemedText 
-              numberOfLines={1} 
+            <ThemedText
+              numberOfLines={1}
               className={`flex-1 text-sm pr-10 ${item.unread ? 'text-black dark:text-white font-medium' : 'text-light-subtext dark:text-dark-subtext'}`}
             >
               {item.lastMessage}

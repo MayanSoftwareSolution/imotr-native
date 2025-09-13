@@ -1,10 +1,10 @@
-import { useThemeColors } from '@/src/contexts/ThemeColors';
 import { TabButton } from 'components/TabButton';
 import { Tabs, TabList, TabTrigger, TabSlot } from 'expo-router/ui';
 import React from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useBusinessMode } from '@/src/contexts/BusinesModeContext';
+import { useThemeColors } from '@/src/contexts/ThemeColors';
 
 export default function Layout() {
   const colors = useThemeColors();
@@ -73,7 +73,7 @@ export default function Layout() {
         </TabTrigger>
 
         <TabTrigger
-          name="trips"
+          name="history"
           href="/trips"
           asChild
           style={{ display: isBusinessMode ? 'none' : 'flex' }}>
@@ -101,7 +101,6 @@ export default function Layout() {
             Profile
           </TabButton>
         </TabTrigger>
-
       </TabList>
     </Tabs>
   );

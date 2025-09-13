@@ -1,206 +1,319 @@
-import { Modal, Pressable, View, Platform } from "react-native";
-import Animated from 'react-native-reanimated';
-import Icon from "./Icon";
-import ThemedText from "./ThemedText";
-import ThemeToggle from "./ThemeToggleOld";
-import { Link } from "expo-router";
-import React, { useState, useEffect } from "react";
-import Counter from "./forms/Counter";
-import useThemeColors from "@/src/contexts/ThemeColors";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { TextInput } from "react-native-gesture-handler";
-import Divider from "./layout/Divider";
-import AnimatedView from "./AnimatedView";
-import ThemedScroller from "./ThemeScroller";
+import { BlurView } from 'expo-blur';
+import { router } from 'expo-router';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Modal, Pressable, View, Platform } from 'react-native';
+import { TextInput } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import AnimatedView from './AnimatedView';
+import { Button } from './Button';
+import DateRangeCalendar from './DateRangeCalendar';
+import Icon from './Icon';
+import ThemedScroller from './ThemeScroller';
+import ThemedText from './ThemedText';
+import Counter from './forms/Counter';
+import Divider from './layout/Divider';
+
+import { allVehicles } from '@/data/vehicles';
+import useThemeColors from '@/src/contexts/ThemeColors';
+// eslint-disable-next-line import/order
 import { shadowPresets } from '@/utils/useShadow';
-import { useSharedValue, useAnimatedStyle, withTiming } from "react-native-reanimated";
-import { BlurView } from "expo-blur";
-import DateRangeCalendar from "./DateRangeCalendar";
-import { Button } from "./Button";
+
+// NEW: use your central vehicles data
 
 const SearchBar = (props: any) => {
-    const [showModal, setShowModal] = useState(false);
-    return (
-        <>
-            <View className='px-global  bg-light-primary dark:bg-dark-primary w-full relative z-50'>
+  const [showModal, setShowModal] = useState(false);
+  return (
+    <>
+      <View className="relative z-50 w-full bg-light-primary px-global dark:bg-dark-primary">
+        <Pressable onPress={() => setShowModal(true)}>
+          <Animated.View
+            sharedTransitionTag="searchBar"
+            style={{
+              elevation: 10,
+              height: 50,
+              shadowColor: '#000',
+              shadowOpacity: 0.3,
+              shadowRadius: 8.84,
+              shadowOffset: { width: 0, height: 0 },
+            }}
+            className="relative z-50 mb-4 mt-3 flex-row items-center justify-center rounded-full bg-light-primary px-10 py-4 dark:bg-white/20">
+            <Icon name="Search" size={16} strokeWidth={3} />
+            <ThemedText className="ml-2 mr-4 font-medium text-black dark:text-white">
+              Find vehicles in Cape Town
+            </ThemedText>
+          </Animated.View>
+        </Pressable>
+      </View>
 
-                <Pressable className="" onPress={() => setShowModal(true)}>
-                    <Animated.View
-                        sharedTransitionTag="searchBar"
-                        style={{ elevation: 10, height: 50, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 8.84, shadowOffset: { width: 0, height: 0 } }}
-                        className='bg-light-primary flex-row justify-center relative z-50 py-4 px-10 mt-3 mb-4  dark:bg-white/20 rounded-full'>
-                        <Icon name="Search" size={16} strokeWidth={3} />
-                        <ThemedText className='text-black dark:text-white font-medium ml-2 mr-4'>Search here</ThemedText>
-                        
-                    </Animated.View>
-                </Pressable>
+      <SearchModal showModal={showModal} setShowModal={setShowModal} />
+    </>
+  );
+};
+
+const SearchModal = ({
+  showModal,
+  setShowModal,
+}: {
+  showModal: boolean;
+  setShowModal: (show: boolean) => void;
+}) => {
+  const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
+  const [openAccordion, setOpenAccordion] = useState<string | null>('where');
+  const [selectedArea, setSelectedArea] = useState<string | null>(null);
+
+  // Areas + counts from vehicles.ts
+  const areas = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const v of allVehicles) {
+      map.set(v.locationArea, (map.get(v.locationArea) ?? 0) + 1);
+    }
+    return Array.from(map.entries())
+      .map(([area, count]) => ({ area, count }))
+      .sort((a, b) => b.count - a.count);
+  }, []);
+
+  const areaLabel = selectedArea ?? areas[0]?.area ?? 'Cape Town';
+
+  return (
+    <Modal
+      statusBarTranslucent
+      className="flex-1"
+      visible={showModal}
+      transparent
+      animationType="fade">
+      <BlurView
+        experimentalBlurMethod="none"
+        intensity={20}
+        tint="systemUltraThinMaterialLight"
+        className="flex-1">
+        <AnimatedView
+          className="flex-1"
+          animation="slideInTop"
+          duration={Platform.OS === 'ios' ? 500 : 0}
+          delay={0}>
+          <View className="flex-1 bg-neutral-200/70 dark:bg-black/90 ">
+            <ThemedScroller style={{ paddingTop: insets.top + 10 }} className="bg-transparent">
+              <Pressable
+                onPress={() => setShowModal(false)}
+                style={{
+                  ...shadowPresets.card,
+                  elevation: 10,
+                  height: 50,
+                  shadowColor: '#000',
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8.84,
+                  shadowOffset: { width: 0, height: 0 },
+                }}
+                className="my-3 ml-auto h-12 w-12 items-center justify-center rounded-full bg-light-primary dark:bg-dark-secondary">
+                <Icon name="X" size={24} strokeWidth={2} />
+              </Pressable>
+
+              <AccordionItem
+                title="Pick-up location"
+                label={areaLabel}
+                isOpen={openAccordion === 'where'}
+                onPress={() => setOpenAccordion(openAccordion === 'where' ? null : 'where')}>
+                <Where
+                  areas={areas}
+                  selectedArea={selectedArea}
+                  onSelectArea={(area: string) => {
+                    setSelectedArea(area);
+                    setOpenAccordion('when');
+                  }}
+                />
+              </AccordionItem>
+
+              <AccordionItem
+                title="Dates"
+                label="Select dates"
+                isOpen={openAccordion === 'when'}
+                onPress={() => setOpenAccordion(openAccordion === 'when' ? null : 'when')}>
+                <DateRangeCalendar
+                  onDateRangeChange={(range) => {
+                    // keep behavior, wire to state if needed
+                    console.log('Date range selected:', range);
+                  }}
+                  minDate={new Date().toISOString().split('T')[0]}
+                  className="mt-4"
+                />
+              </AccordionItem>
+
+              <AccordionItem
+                title="Passengers"
+                label="1 driver"
+                isOpen={openAccordion === 'who'}
+                onPress={() => setOpenAccordion(openAccordion === 'who' ? null : 'who')}>
+                <CounterRow label="Drivers" legend="Must be 18+ with licence" />
+                <Divider />
+                <CounterRow label="Passengers" legend="Non-drivers" />
+                <Divider />
+                <CounterRow label="Child seats" legend="Optional add-on" />
+                <Divider />
+                <CounterRow label="Pets" legend="Travelling with a pet?" />
+              </AccordionItem>
+            </ThemedScroller>
+
+            <View
+              style={{ paddingBottom: insets.bottom + 10 }}
+              className="w-full flex-row justify-between px-6">
+              <Button title="Clear" onPress={() => setShowModal(false)} variant="ghost" />
+              <Button
+                iconStart="Search"
+                title="Search"
+                iconColor="white"
+                textClassName="text-white"
+                onPress={() => {
+                  setShowModal(false);
+                  // pass area if selected (safe even if map ignores it)
+                  const qs = selectedArea ? `?area=${encodeURIComponent(selectedArea)}` : '';
+                  router.push(`/screens/map${qs}`);
+                }}
+                variant="primary"
+              />
             </View>
-
-            <SearchModal showModal={showModal} setShowModal={setShowModal} />
-        </>
-    )
-}
-
-const SearchModal = ({ showModal, setShowModal }: { showModal: boolean, setShowModal: (show: boolean) => void }) => {
-
-    const insets = useSafeAreaInsets();
-    const [openAccordion, setOpenAccordion] = useState<string | null>('where');
-
-
-    return (
-        <Modal statusBarTranslucent={true} className='flex-1' visible={showModal} transparent={true} animationType="fade">
-
-            <BlurView experimentalBlurMethod="none" intensity={20} tint="systemUltraThinMaterialLight" className='flex-1 '>
-                <AnimatedView className="flex-1" animation='slideInTop' duration={Platform.OS === 'ios' ? 500 : 0} delay={0} >
-                    <View className="flex-1 bg-neutral-200/70 dark:bg-black/90 ">
-                        <ThemedScroller style={{ paddingTop: insets.top + 10 }} className="bg-transparent">
-                            <Pressable
-                                onPress={() => setShowModal(false)}
-                                style={{ ...shadowPresets.card, elevation: 10, height: 50, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 8.84, shadowOffset: { width: 0, height: 0 } }}
-                                className="items-center justify-center w-12 my-3 h-12 rounded-full ml-auto bg-light-primary dark:bg-dark-secondary">
-                                <Icon name="X" size={24} strokeWidth={2} />
-                            </Pressable>
-                            <AccordionItem
-                                title="Where?"
-                                label="New York"
-                                isOpen={openAccordion === 'where'}
-                                onPress={() => setOpenAccordion(openAccordion === 'where' ? null : 'where')}>
-                                <Where />
-                            </AccordionItem>
-
-                            <AccordionItem
-                                title="When?"
-                                label="Jul 21"
-                                isOpen={openAccordion === 'when'}
-                                onPress={() => setOpenAccordion(openAccordion === 'when' ? null : 'when')}>
-                                <DateRangeCalendar
-                                    onDateRangeChange={(range) => {
-                                        console.log('Date range selected:', range);
-                                    }}
-                                    minDate={new Date().toISOString().split('T')[0]}
-                                    className="mt-4"
-                                />
-                            </AccordionItem>
-
-                            <AccordionItem
-                                title="Who?"
-                                label="1 adult"
-                                isOpen={openAccordion === 'who'}
-                                onPress={() => setOpenAccordion(openAccordion === 'who' ? null : 'who')}>
-                                <CounterRow label="Adults" legend="Ages 13 or above" />
-                                <Divider />
-                                <CounterRow label="Children" legend="Ages 2-12" />
-                                <Divider />
-                                <CounterRow label="Infants" legend="Under 2" />
-                                <Divider />
-                                <CounterRow label="Pets" legend="Bringing a service animal?" />
-                            </AccordionItem>
-                        </ThemedScroller>
-                        <View style={{ paddingBottom: insets.bottom + 10 }} className="flex-row w-full px-6 justify-between">
-                            <Button title="Clear " onPress={() => setShowModal(false)} variant="ghost" className="" />
-                            <Button iconStart="Search" title="Search" iconColor="white" textClassName="text-white" onPress={() => {setShowModal(false); router.push('/screens/map')}} variant="primary" className="" />
-                        </View>
-                    </View>
-                </AnimatedView>
-            </BlurView>
-        </Modal>
-    );
+          </View>
+        </AnimatedView>
+      </BlurView>
+    </Modal>
+  );
 };
 
 const AccordionItem = ({
-    title,
-    children,
-    isOpen,
-    label,
-    onPress
+  title,
+  children,
+  isOpen,
+  label,
+  onPress,
 }: {
-    title: string;
-    children: React.ReactNode;
-    isOpen: boolean;
-    label?: string;
-    onPress: () => void;
+  title: string;
+  children: React.ReactNode;
+  isOpen: boolean;
+  label?: string;
+  onPress: () => void;
 }) => {
-    const [contentHeight, setContentHeight] = useState(0);
-    const animatedHeight = useSharedValue(0);
+  const [contentHeight, setContentHeight] = useState(0);
+  const animatedHeight = useSharedValue(0);
 
-    const animatedStyle = useAnimatedStyle(() => ({
-        height: withTiming(animatedHeight.value, { duration: 200 }),
-        overflow: 'hidden',
-    }));
+  const animatedStyle = useAnimatedStyle(() => ({
+    height: withTiming(animatedHeight.value, { duration: 200 }),
+    overflow: 'hidden',
+  }));
 
-    useEffect(() => {
-        animatedHeight.value = isOpen ? contentHeight : 0;
-    }, [isOpen, contentHeight]);
+  useEffect(() => {
+    animatedHeight.value = isOpen ? contentHeight : 0;
+  }, [isOpen, contentHeight]);
 
-    return (
-        <View
-            style={{ ...shadowPresets.large }}
-            className='bg-light-primary relative dark:bg-dark-secondary rounded-2xl mb-global'>
-            <Pressable onPress={onPress} className='w-full p-global'>
-
-                <View className='flex-row w-full justify-between items-center'>
-                    <ThemedText className={` ${isOpen ? 'text-lg' : 'text-lg'} font-semibold`}>{title}</ThemedText>
-                    {isOpen ? <></> : <ThemedText className='text-sm font-semibold'>{label}</ThemedText>}
-                </View>
-            </Pressable>
-
-
-            <Animated.View style={animatedStyle}>
-                <View
-                    onLayout={(e) => setContentHeight(e.nativeEvent.layout.height)}
-                    className="absolute w-full px-global pb-2 pt-0 -mt-4">
-                    {children}
-                </View>
-            </Animated.View>
+  return (
+    <View
+      style={{ ...shadowPresets.large }}
+      className="relative mb-global rounded-2xl bg-light-primary dark:bg-dark-secondary">
+      <Pressable onPress={onPress} className="w-full p-global">
+        <View className="w-full flex-row items-center justify-between">
+          <ThemedText className="text-lg font-semibold">{title}</ThemedText>
+          {!isOpen ? <ThemedText className="text-sm font-semibold">{label}</ThemedText> : null}
         </View>
-    );
+      </Pressable>
+
+      <Animated.View style={animatedStyle}>
+        <View
+          onLayout={(e) => setContentHeight(e.nativeEvent.layout.height)}
+          className="absolute -mt-4 w-full px-global pb-2 pt-0">
+          {children}
+        </View>
+      </Animated.View>
+    </View>
+  );
 };
 
-const CounterRow = (props: { label: string, legend: string }) => {
-    return (
-        <View className='flex-row items-center justify-between py-4'>
-            <View>
-                <ThemedText className='text-base font-semibold'>{props.label}</ThemedText>
-                <ThemedText className='text-sm'>{props.legend}</ThemedText>
-            </View>
-            <Counter />
-        </View>
-    )
-}
+const CounterRow = (props: { label: string; legend: string }) => {
+  return (
+    <View className="flex-row items-center justify-between py-4">
+      <View>
+        <ThemedText className="text-base font-semibold">{props.label}</ThemedText>
+        <ThemedText className="text-sm">{props.legend}</ThemedText>
+      </View>
+      <Counter />
+    </View>
+  );
+};
 
-const Where = () => {
-    const colors = useThemeColors();
-    return (
+const Where = ({
+  areas,
+  selectedArea,
+  onSelectArea,
+}: {
+  areas: { area: string; count: number }[];
+  selectedArea: string | null;
+  onSelectArea: (area: string) => void;
+}) => {
+  const colors = useThemeColors();
+
+  return (
+    <>
+      <View className="relative">
+        <Icon
+          name="Search"
+          className="absolute left-4 top-1/2 -translate-y-1/2"
+          size={16}
+          strokeWidth={3}
+        />
+        <TextInput
+          className="mt-4 rounded-xl border border-neutral-500 p-4 pl-10 dark:border-neutral-300"
+          placeholder="Search areas or vehicles"
+          placeholderTextColor={colors.text}
+        />
+      </View>
+
+      {selectedArea ? (
         <>
-            <View className='relative'>
-                <Icon name="Search" className='absolute left-4 top-1/2 -translate-y-1/2' size={16} strokeWidth={3} />
-                <TextInput
-                    className='p-4 pl-10 mt-4 border border-neutral-500 dark:border-neutral-300 rounded-xl'
-                    placeholder='Search destinations'
-                    placeholderTextColor={colors.text}
-                />
-            </View>
-            <ThemedText className='text-xs mt-4'>Recent searches</ThemedText>
-            <DestinationRow icon="MapPin" title="New York" description="Week in July" />
-            <ThemedText className='text-xs mt-4'>Suggested destinations</ThemedText>
-            <DestinationRow icon="Send" title="Nearby" description="Explore the area" iconbg="bg-sky-100 dark:bg-sky-900" />
-            <DestinationRow icon="Building2" title="New Jersey" description="Week in July" iconbg="bg-amber-100 dark:bg-amber-900" />
-            <DestinationRow icon="MapPin" title="Washington DC" description="Week in July" iconbg="bg-amber-100 dark:bg-amber-900" />
+          <ThemedText className="mt-4 text-xs">Selected</ThemedText>
+          <DestinationRow
+            icon="MapPin"
+            title={selectedArea}
+            description="Tap to change"
+            onPress={() => onSelectArea(selectedArea)}
+          />
         </>
-    )
-}
+      ) : null}
 
-const DestinationRow = (props: any) => {
-    return (
-        <View className="flex-row items-center justify-start my-2">
-            <Icon name={props.icon} size={25} strokeWidth={1.2} className={`w-12 h-12 rounded-xl bg-light-secondary dark:bg-dark-primary ${props.iconbg}`} />
-            <View className="ml-4">
-                <ThemedText className="text-sm font-semibold">{props.title}</ThemedText>
-                <ThemedText className="text-xs text-neutral-500">{props.description}</ThemedText>
-            </View>
-        </View>
-    )
-}
+      <ThemedText className="mt-4 text-xs">Popular areas</ThemedText>
+      {areas.slice(0, 8).map(({ area, count }) => (
+        <DestinationRow
+          key={area}
+          icon="MapPin"
+          title={area}
+          description={`${count} vehicles`}
+          onPress={() => onSelectArea(area)}
+        />
+      ))}
+    </>
+  );
+};
+
+const DestinationRow = (props: {
+  icon: string;
+  title: string;
+  description: string;
+  iconbg?: string;
+  onPress?: () => void;
+}) => {
+  return (
+    <Pressable onPress={props.onPress} className="my-2 flex-row items-center justify-start">
+      <Icon
+        name={props.icon as any}
+        size={25}
+        strokeWidth={1.2}
+        className={`h-12 w-12 rounded-xl bg-light-secondary dark:bg-dark-primary ${props.iconbg ?? ''}`}
+      />
+      <View className="ml-4">
+        <ThemedText className="text-sm font-semibold">{props.title}</ThemedText>
+        <ThemedText className="text-xs text-neutral-500">{props.description}</ThemedText>
+      </View>
+    </Pressable>
+  );
+};
 
 export default SearchBar;

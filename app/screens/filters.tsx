@@ -1,107 +1,136 @@
-import React, { useState } from 'react';
-import { View, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import ThemedText from '@/components/ThemedText';
-import Slider from '@/components/forms/Slider';
-import Counter from '@/components/forms/Counter';
-import FormTabs, { FormTab } from '@/components/forms/FormTabs';
+import React, { useMemo, useState } from 'react';
+import { View } from 'react-native';
+
 import { Button } from '@/components/Button';
-import ThemedScroller from '@/components/ThemeScroller';
-import ThemeFooter from '@/components/ThemeFooter';
-import Header from '@/components/Header';
-import Section from '@/components/layout/Section';
 import { Chip } from '@/components/Chip';
+import Header from '@/components/Header';
+import ThemeFooter from '@/components/ThemeFooter';
+import ThemedScroller from '@/components/ThemeScroller';
+import ThemedText from '@/components/ThemedText';
+import Counter from '@/components/forms/Counter';
+import Slider from '@/components/forms/Slider';
 import Switch from '@/components/forms/Switch';
+import Section from '@/components/layout/Section';
+import { allVehicles } from '@/data/vehicles';
 
 export default function FiltersScreen() {
-    const router = useRouter();
-    const [price, setPrice] = useState(50);
+  const router = useRouter();
+  const [price, setPrice] = useState(50);
 
-    const handleApplyFilters = () => {
-        // Handle applying filters here
-        router.back();
-    };
+  const vehicleTypes = useMemo(() => {
+    const set = new Set(allVehicles.map((v) => v.type));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, []);
 
-    return (
-        <>
-            <Header showBackButton title="Filters" />
-            <ThemedScroller className="flex-1 bg-light-primary dark:bg-dark-primary">
-                <Section className='mb-7 pb-7 mt-8 border-b border-light-secondary dark:border-dark-secondary' title="Type of place">
-                    <FormTabs className='mt-4'>
-                        <FormTab title="Any type" />
-                        <FormTab title="Room" />
-                        <FormTab title="Entire place" />
-                    </FormTabs>
-                </Section>
+  const handleApplyFilters = () => {
+    router.back();
+  };
 
-                <Section className='mb-7 pb-7 border-b border-light-secondary dark:border-dark-secondary' title="Price" subtitle={`Up to $${price} USD`}>
-                    <Slider
-                        value={price}
-                        onValueChange={setPrice}
-                        minValue={100}
-                        maxValue={1000}
-                        step={5}
-                        initialValue={500}
-                        size="l"
-                        className='mt-2'
-                    />
-                </Section>
+  return (
+    <>
+      <Header showBackButton title="Filters" />
+      <ThemedScroller className="flex-1 bg-light-primary dark:bg-dark-primary">
+        {/* Vehicle type: multi-select chips with reliable spacing */}
+        <Section
+          className="mb-7 mt-8 border-b border-light-secondary pb-7 dark:border-dark-secondary"
+          title="Vehicle type"
+        >
+          <View style={{ paddingTop: 20 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+              {vehicleTypes.map((t) => (
+                <View key={t} style={{ marginRight: 8, marginBottom: 8 }}>
+                  <Chip icon="Car" label={t} size="lg" selectable />
+                </View>
+              ))}
+            </View>
+          </View>
+        </Section>
 
-                <Section className='mb-7 pb-7 border-b border-light-secondary dark:border-dark-secondary' title="Rooms and beds">
-                    <CounterRow label="Bedrooms" />
-                    <CounterRow label="Beds" />
-                    <CounterRow label="Bathrooms"  />
-                </Section>
+        <Section
+          className="mb-7 border-b border-light-secondary pb-7 dark:border-dark-secondary"
+          title="Price per day"
+          subtitle={`Up to R${price} / day`}
+        >
+          <Slider
+            value={price}
+            onValueChange={setPrice}
+            minValue={100}
+            maxValue={1000}
+            step={5}
+            initialValue={500}
+            size="l"
+            className="mt-2"
+          />
+        </Section>
 
-                <Section className='mb-7 pb-7 border-b border-light-secondary dark:border-dark-secondary' title="Amenities">
-                    <View className='flex-row flex-wrap gap-2 mt-2'>
-                        <Chip icon="Bed" label="Kitchen" size="lg" selectable />
-                        <Chip icon="Snowflake" label="Air conditioning" size="lg" selectable />
-                        <Chip icon="Wifi" label="Wifi" size="lg" selectable />
-                        <Chip icon="Tv" label="TV" size="lg" selectable />
-                        <Chip icon="Car" label="Parking" size="lg" selectable />
-                    </View>
-                </Section>
+        <Section
+          className="mb-7 border-b border-light-secondary pb-7 dark:border-dark-secondary"
+          title="Seats & doors"
+        >
+          <CounterRow label="Seats" />
+          <CounterRow label="Doors" />
+          <CounterRow label="Child seats" />
+        </Section>
 
-                
+        {/* Features: multi-select chips with reliable spacing */}
+        <Section
+          className="mb-7 border-b border-light-secondary pb-7 dark:border-dark-secondary"
+          title="Features"
+        >
+          <View style={{ paddingTop: 20 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+              <View style={{ marginRight: 8, marginBottom: 8 }}>
+                <Chip icon="Snowflake" label="Air conditioning" size="lg" selectable />
+              </View>
+              <View style={{ marginRight: 8, marginBottom: 8 }}>
+                <Chip icon="Wifi" label="Bluetooth" size="lg" selectable />
+              </View>
+              <View style={{ marginRight: 8, marginBottom: 8 }}>
+                <Chip icon="Tv" label="CarPlay / Android Auto" size="lg" selectable />
+              </View>
+              <View style={{ marginRight: 8, marginBottom: 8 }}>
+                <Chip icon="Car" label="Roof rack" size="lg" selectable />
+              </View>
+              <View style={{ marginRight: 8, marginBottom: 8 }}>
+                <Chip icon="Car" label="Parking sensors" size="lg" selectable />
+              </View>
+            </View>
+          </View>
+        </Section>
 
-                <Section className='mb-7 pb-7 border-b border-light-secondary dark:border-dark-secondary' title="Additional Options">
-                    <View className='mt-4 space-y-4'>
-                        <Switch
-                            label="Step free bedroom access"
-                        />
-                        <Switch
-                            label="Shower grab bar"
-                        />
-                        <Switch
-                            label="Disabled paraking spot"
-                        />
-                        
-                    </View>
-                </Section>
-            </ThemedScroller>
-            <ThemeFooter>
-                <Button
-                    title="Apply Filters"
-                    rounded="full"
-                    size="large"
-                    className='bg-highlight'
-                    textClassName='text-white'
-                    onPress={handleApplyFilters}
-                />
-            </ThemeFooter>
-        </>
-    );
-} 
-
+        <Section
+          className="mb-7 border-b border-light-secondary pb-7 dark:border-dark-secondary"
+          title="Additional options"
+        >
+          <View className="mt-4 space-y-4">
+            <Switch label="Automatic transmission" />
+            <Switch label="Unlimited kilometres" />
+            <Switch label="Delivery available" />
+          </View>
+        </Section>
+      </ThemedScroller>
+      <ThemeFooter>
+        <Button
+          title="Apply Filters"
+          rounded="full"
+          size="large"
+          className="bg-highlight"
+          textClassName="text-white"
+          onPress={handleApplyFilters}
+        />
+      </ThemeFooter>
+    </>
+  );
+}
 
 const CounterRow = (props: { label: string }) => {
-    return (
-        <View className='flex-row items-center justify-between py-2'>
-            <View>
-                <ThemedText className='text-base font-normal'>{props.label}</ThemedText>
-            </View>
-            <Counter />
-        </View>
-    )
-}
+  return (
+    <View className="flex-row items-center justify-between py-2">
+      <View>
+        <ThemedText className="text-base font-normal">{props.label}</ThemedText>
+      </View>
+      <Counter />
+    </View>
+  );
+};

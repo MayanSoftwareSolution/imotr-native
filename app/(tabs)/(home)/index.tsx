@@ -1,17 +1,17 @@
 import { router } from 'expo-router';
-import React, { useRef, useEffect, useContext } from 'react';
-import { View, Text, Pressable, Image, Animated } from 'react-native';
+import React, { useContext } from 'react';
+import { View, Pressable, Image, Animated } from 'react-native';
 
 import { ScrollContext } from './_layout';
 
 import AnimatedView from '@/components/AnimatedView';
 import Card from '@/components/Card';
 import { CardScroller } from '@/components/CardScroller';
-import Header, { HeaderIcon } from '@/components/Header';
 import ThemeScroller from '@/components/ThemeScroller';
 import ThemedText from '@/components/ThemedText';
 import Section from '@/components/layout/Section';
-import useShadow, { shadowPresets } from '@/utils/useShadow';
+import { vehicleSections } from '@/data/vehicles';
+import { shadowPresets } from '@/utils/useShadow';
 
 const HomeScreen = () => {
   const scrollY = useContext(ScrollContext);
@@ -23,199 +23,72 @@ const HomeScreen = () => {
       })}
       scrollEventThrottle={16}>
       <AnimatedView animation="scaleIn" className="mt-4 flex-1">
+        {/* Continue Search card */}
         <Pressable
+          accessibilityRole="button"
           onPress={() => router.push('/screens/map')}
           style={{ ...shadowPresets.large }}
-          className="mb-8 flex flex-row items-center rounded-2xl bg-light-primary p-5 dark:bg-dark-secondary">
-          <ThemedText className="flex-1 pr-2 text-base font-medium">
-            Continue searching for experiences in New York
+          className="mb-4 flex flex-row items-center rounded-2xl bg-light-primary p-5 dark:bg-dark-secondary">
+          <ThemedText className="flex-1 pr-3 text-base font-medium">
+            Continue searching for vehicles in Cape Town
           </ThemedText>
           <View className="relative h-20 w-20">
             <View className="relative z-20 h-full w-full overflow-hidden rounded-xl border-2 border-light-primary dark:border-dark-primary">
               <Image
                 className="h-full w-full"
-                source={{
-                  uri: 'https://images.unsplash.com/photo-1526318896980-cf78c088247c?q=80&w=400',
-                }}
+                source={require('@/assets/vehicle_images/audi_sedan.avif')}
               />
             </View>
             <View className="absolute left-1 top-0 h-full w-full rotate-12 overflow-hidden rounded-xl border-2 border-light-primary dark:border-dark-primary">
               <Image
                 className="h-full w-full"
-                source={{
-                  uri: 'https://images.pexels.com/photos/69903/pexels-photo-69903.jpeg?auto=compress&cs=tinysrgb&w=1200',
-                }}
+                source={require('@/assets/vehicle_images/volvo_suv.jpg')}
               />
             </View>
           </View>
         </Pressable>
-        {[
-          {
-            title: 'Popular homes in New York',
-            properties: [
-              {
-                title: 'Apartment in Brooklyn',
-                image: require('@/assets/img/room-1.avif'),
-                price: '$85',
-              },
-              {
-                title: 'Flat in Manhattan',
-                image: require('@/assets/img/room-2.avif'),
-                price: '$90',
-              },
-              {
-                title: 'House in Long Island',
-                image: require('@/assets/img/room-3.avif'),
-                price: '$110',
-              },
-              {
-                title: 'Flat in Manhattan',
-                image: require('@/assets/img/room-4.avif'),
-                price: '$95',
-              },
-            ],
-          },
-          {
-            title: 'Trending in Queens',
-            properties: [
-              {
-                title: 'Modern Loft in Astoria',
-                image: require('@/assets/img/room-5.avif'),
-                price: '$85',
-              },
-              {
-                title: 'Studio in Long Island',
-                image: require('@/assets/img/room-6.avif'),
-                price: '$90',
-              },
-              {
-                title: 'Condo in Forest Hills',
-                image: require('@/assets/img/room-7.avif'),
-                price: '$110',
-              },
-              {
-                title: 'Apartment in Flushing',
-                image: require('@/assets/img/room-1.avif'),
-                price: '$95',
-              },
-            ],
-          },
-          {
-            title: 'Best rated in The Bronx',
-            properties: [
-              {
-                title: 'Cozy Home in Riverdale',
-                image: require('@/assets/img/room-2.avif'),
-                price: '$75',
-              },
-              {
-                title: 'Apartment at Riverdale',
-                image: require('@/assets/img/room-3.avif'),
-                price: '$80',
-              },
-              {
-                title: 'Loft in Mott Haven',
-                image: require('@/assets/img/room-4.avif'),
-                price: '$95',
-              },
-              {
-                title: 'Condo in Fordham',
-                image: require('@/assets/img/room-5.avif'),
-                price: '$85',
-              },
-            ],
-          },
-          {
-            title: 'Top picks in Staten Island',
-            properties: [
-              {
-                title: 'House in St. George',
-                image: require('@/assets/img/room-6.avif'),
-                price: '$120',
-              },
-              {
-                title: 'Apartment in George',
-                image: require('@/assets/img/room-7.avif'),
-                price: '$95',
-              },
-              {
-                title: 'Bungalow in Great Kills',
-                image: require('@/assets/img/room-1.avif'),
-                price: '$110',
-              },
-              {
-                title: 'Condo in Todt Hill',
-                image: require('@/assets/img/room-2.avif'),
-                price: '$135',
-              },
-            ],
-          },
-          {
-            title: 'New listings in Harlem',
-            properties: [
-              {
-                title: 'Brownstone in Hamilton',
-                image: require('@/assets/img/room-3.avif'),
-                price: '$125',
-              },
-              {
-                title: 'Studio in East Harlem',
-                image: require('@/assets/img/room-4.avif'),
-                price: '$90',
-              },
-              {
-                title: 'Apartment in Sugar Hill',
-                image: require('@/assets/img/room-5.avif'),
-                price: '$105',
-              },
-              {
-                title: 'Loft in Manhattanville',
-                image: require('@/assets/img/room-6.avif'),
-                price: '$115',
-              },
-            ],
-          },
-          {
-            title: 'Featured in Williamsburg',
-            properties: [
-              {
-                title: 'Industrial Loft',
-                image: require('@/assets/img/room-7.avif'),
-                price: '$140',
-              },
-              {
-                title: 'Rooftop Apartment',
-                image: require('@/assets/img/room-1.avif'),
-                price: '$125',
-              },
-              { title: 'Modern Studio', image: require('@/assets/img/room-2.avif'), price: '$110' },
-              {
-                title: 'Converted Warehouse',
-                image: require('@/assets/img/room-3.avif'),
-                price: '$130',
-              },
-            ],
-          },
-        ].map((section, index) => (
+
+        {/* Become an Owner card */}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/screens/list-vehicle')} // TODO: adjust route if your listing screen differs
+          style={{ ...shadowPresets.large }}
+          className="mb-8 flex flex-row items-center rounded-2xl bg-light-primary p-5 dark:bg-dark-secondary">
+          <View className="flex-1 pr-3">
+            <ThemedText className="text-base font-medium">
+              Have a spare vehicle you don&apos;t use often? Become an owner and earn extra cash.
+            </ThemedText>
+          </View>
+          <View className="relative h-20 w-20">
+            <View className="relative z-20 h-full w-full overflow-hidden rounded-xl border-2 border-light-primary dark:border-dark-primary">
+              <Image
+                className="h-full w-full"
+                source={require('@/assets/vehicle_images/ford_pickup.avif')}
+              />
+            </View>
+          </View>
+        </Pressable>
+
+        {vehicleSections.map((section, index) => (
           <Section
             key={`ny-section-${index}`}
             title={section.title}
             titleSize="lg"
             link="/screens/map"
-            linkText="View all">
+            linkText="View all vehicles">
             <CardScroller space={15} className="mt-1.5 pb-4">
-              {section.properties.map((property, propIndex) => (
+              {section.vehicles.map((vehicle, propIndex) => (
                 <Card
                   key={`property-${index}-${propIndex}`}
-                  title={property.title}
+                  title={vehicle.title}
                   rounded="2xl"
                   hasFavorite
                   rating={4.5}
-                  href="/screens/product-detail"
-                  price={property.price}
+                  href={`/screens/product-detail?id=${encodeURIComponent(String(vehicle.id))}`}
+                  price={vehicle.priceDisplay}
                   width={160}
                   imageHeight={160}
-                  image={property.image}
+                  image={vehicle.image}
                 />
               ))}
             </CardScroller>

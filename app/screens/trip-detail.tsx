@@ -1,5 +1,8 @@
-import React from 'react';
-import { View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import React, { useMemo } from 'react';
+import { View, Platform, Linking } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
+
 import AnimatedView from '@/components/AnimatedView';
 import Avatar from '@/components/Avatar';
 import { Button } from '@/components/Button';
@@ -12,69 +15,125 @@ import ThemedFooter from '@/components/ThemeFooter';
 import ThemedScroller from '@/components/ThemeScroller';
 import ThemedText from '@/components/ThemedText';
 import Divider from '@/components/layout/Divider';
+// eslint-disable-next-line import/order
 import Section from '@/components/layout/Section';
 
-// Sample trip data
-const tripData = {
-  id: '1',
-  propertyName: 'Luxury Beachfront Villa',
-  location: 'Barcelona, Spain',
-  host: {
-    name: 'Maria Rodriguez',
-    avatar: require('@/assets/img/user-2.jpg'),
-    rating: 4.9,
-    reviewCount: 127,
-  },
-  checkIn: 'Jul 15, 2024',
-  checkOut: 'Jul 22, 2024',
-  nights: 7,
-  guests: 4,
-  reservationNumber: '#RES-789456',
-  totalPrice: '$2,450',
-  priceBreakdown: {
-    nightlyRate: '$300',
-    nights: 7,
-    subtotal: '$2,100',
-    cleaningFee: '$75',
-    serviceFee: '$150',
-    taxes: '$125',
-    total: '$2,450',
-  },
-  paymentMethod: {
-    type: 'Visa',
-    lastFour: '1234',
-    amount: '$2,450',
-  },
-  cancellationPolicy:
-    'Free cancellation until Jul 8. Cancel before check-in on Jul 15 for a partial refund.',
-  coordinates: {
-    latitude: 41.3851,
-    longitude: 2.1734,
-  },
+// Vehicle data
+import { vehiclesById } from '@/data/vehicles';
+
+// --- Helpers ---
+const fmtDate = (iso?: string) => {
+  if (!iso) return undefined;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return undefined;
+  return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
+};
+const diffDays = (start?: string, end?: string) => {
+  if (!start || !end) return undefined;
+  const s = new Date(start);
+  const e = new Date(end);
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return undefined;
+  const ms = e.getTime() - s.getTime();
+  return Math.max(1, Math.round(ms / (1000 * 60 * 60 * 24)));
 };
 
-const TripDetailScreen = () => {
+const RentalDetailScreen = () => {
+  // Params you can pass when navigating:
+  // /screens/trip-detail?id=veh-ct-0009&start=2025-08-15&end=2025-08-22&days=7&total=2450&res=#RES-789456
+  const { id, start, end, days, total, res, drivers, passengers } = useLocalSearchParams<{
+    id?: string;
+    start?: string; // ISO YYYY-MM-DD
+    end?: string; // ISO YYYY-MM-DD
+    days?: string; // numeric string
+    total?: string; // numeric string (Rands)
+    res?: string; // reservation number
+    drivers?: string; // optional counts
+    passengers?: string;
+  }>();
+
+  const vehicle = id ? vehiclesById[id] : undefined;
+
+  const reviewHref =
+    `/screens/review?id=${encodeURIComponent(String(id ?? ''))}` +
+    (start ? `&start=${encodeURIComponent(start)}` : '') +
+    (end ? `&end=${encodeURIComponent(end)}` : '');
+
+  // Derive dates/durations
+  const pickUpLabel = fmtDate(start);
+  const dropOffLabel = fmtDate(end);
+  const calculatedDays = diffDays(start, end);
+  const rentalDays = Number(days ?? calculatedDays ?? 1);
+
+  // Price maths (fallbacks if total not provided)
+  const dailyRate = vehicle?.pricePerDay ?? 0;
+  const subtotal = dailyRate * rentalDays;
+  // Simple demo fees (tweak as needed)
+  const insuranceFee = Math.round(subtotal * 0.08);
+  const serviceFee = Math.round(subtotal * 0.05);
+  const taxes = Math.round(subtotal * 0.12);
+  const computedTotal = subtotal + insuranceFee + serviceFee + taxes;
+  const totalRands = Number.isFinite(Number(total)) ? Number(total) : computedTotal;
+
+  // “Owner” placeholder (vehicles.ts doesn’t have hosts yet)
+  const owner = {
+    name: 'Verified Owner',
+    avatar: require('@/assets/img/user-2.jpg'),
+    rating: vehicle?.rating ?? 4.6,
+    reviewCount: Math.floor((vehicle?.rating ?? 4.6) * 40),
+  };
+
+  // Map region (fallback to Cape Town CBD)
+  const region = useMemo(
+    () => ({
+      latitude: vehicle?.lat ?? -33.9249,
+      longitude: vehicle?.lng ?? 18.4241,
+      latitudeDelta: 0.06,
+      longitudeDelta: 0.06,
+    }),
+    [vehicle?.lat, vehicle?.lng]
+  );
+
+  const openInMaps = () => {
+    if (!vehicle?.lat || !vehicle?.lng) return;
+    const label = encodeURIComponent(`${vehicle.title} - ${vehicle.locationArea}`);
+    const { lat, lng } = vehicle;
+    const url =
+      Platform.select({
+        ios: `maps:0,0?q=${label}&ll=${lat},${lng}`,
+        android: `geo:${lat},${lng}?q=${lat},${lng}(${label})`,
+        default: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+      }) || `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    Linking.openURL(url);
+  };
+
+  if (!vehicle) {
+    return (
+      <>
+        <Header title="Rental Details" showBackButton />
+        <ThemedScroller className="flex-1 px-global">
+          <Section title="Vehicle not found" titleSize="lg" className="pt-6">
+            <ThemedText className="text-light-subtext dark:text-dark-subtext">
+              We couldn’t load this vehicle. Please go back and try again.
+            </ThemedText>
+          </Section>
+        </ThemedScroller>
+      </>
+    );
+  }
+
   return (
     <>
-      <Header title="Trip Details" showBackButton />
+      <Header title="Rental Details" showBackButton />
       <ThemedScroller className="flex-1 px-0" keyboardShouldPersistTaps="handled">
         <AnimatedView animation="fadeIn" duration={400} delay={100}>
-          {/* Property Images */}
+          {/* Vehicle Images */}
           <View className="px-global">
-            <ImageCarousel
-              height={300}
-              rounded="2xl"
-              images={[
-                'https://tinyurl.com/2blrf2sk',
-                'https://tinyurl.com/2yyfr9rc',
-                'https://tinyurl.com/2cmu4ns5',
-              ]}
-            />
+            <ImageCarousel height={300} rounded="2xl" images={[vehicle.image]} />
           </View>
 
-          {/* Property Name and Location */}
+          {/* Vehicle Title and Location */}
           <View className="px-global pb-4 pt-6">
-            <ThemedText className="mb-2 text-2xl font-bold">{tripData.propertyName}</ThemedText>
+            <ThemedText className="mb-2 text-2xl font-bold">{vehicle.title}</ThemedText>
             <View className="flex-row items-center">
               <Icon
                 name="MapPin"
@@ -82,24 +141,24 @@ const TripDetailScreen = () => {
                 className="mr-2 text-light-subtext dark:text-dark-subtext"
               />
               <ThemedText className="text-light-subtext dark:text-dark-subtext">
-                {tripData.location}
+                {vehicle.locationArea}, Cape Town
               </ThemedText>
             </View>
           </View>
 
           <Divider className="h-2 bg-light-secondary dark:bg-dark-darker" />
 
-          {/* Host Information */}
-          <Section title="Hosted by" titleSize="lg" className="px-global pt-4">
+          {/* Owner / Listing Info */}
+          <Section title="Listed by" titleSize="lg" className="px-global pt-4">
             <View className="mb-4 mt-4 flex-row items-center justify-between">
               <View className="flex-1 flex-row items-center">
-                <Avatar src={tripData.host.avatar} size="lg" />
+                <Avatar src={owner.avatar} size="lg" />
                 <View className="ml-3 flex-1">
-                  <ThemedText className="text-lg font-semibold">{tripData.host.name}</ThemedText>
+                  <ThemedText className="text-lg font-semibold">{owner.name}</ThemedText>
                   <View className="mt-1 flex-row items-center">
-                    <ShowRating rating={tripData.host.rating} size="sm" />
+                    <ShowRating rating={owner.rating} size="sm" />
                     <ThemedText className="ml-2 text-sm text-light-subtext dark:text-dark-subtext">
-                      ({tripData.host.reviewCount} reviews)
+                      ({owner.reviewCount} reviews)
                     </ThemedText>
                   </View>
                 </View>
@@ -108,8 +167,8 @@ const TripDetailScreen = () => {
 
             <ListLink
               icon="MessageCircle"
-              title="Message host"
-              description="Get help with your reservation"
+              title="Message owner"
+              description="Get help with your booking"
               href="/screens/chat/user"
               showChevron
               className="rounded-xl bg-light-secondary px-4 py-3 dark:bg-dark-secondary"
@@ -118,26 +177,26 @@ const TripDetailScreen = () => {
 
           <Divider className="mt-6 h-2 bg-light-secondary dark:bg-dark-darker" />
 
-          {/* Check-in / Check-out */}
-          <Section title="Your stay" titleSize="lg" className="px-global pt-4">
+          {/* Rental Window */}
+          <Section title="Your rental" titleSize="lg" className="px-global pt-4">
             <View className="mt-4 space-y-4">
               <View className="flex-row items-center justify-between rounded-xl bg-light-secondary p-4 dark:bg-dark-secondary">
                 <View>
                   <ThemedText className="text-sm text-light-subtext dark:text-dark-subtext">
-                    Check-in
+                    Pick-up
                   </ThemedText>
-                  <ThemedText className="text-lg font-semibold">{tripData.checkIn}</ThemedText>
+                  <ThemedText className="text-lg font-semibold">{pickUpLabel ?? '—'}</ThemedText>
                   <ThemedText className="text-sm text-light-subtext dark:text-dark-subtext">
-                    After 3:00 PM
+                    From 9:00 AM
                   </ThemedText>
                 </View>
                 <View className="items-end">
                   <ThemedText className="text-sm text-light-subtext dark:text-dark-subtext">
-                    Check-out
+                    Drop-off
                   </ThemedText>
-                  <ThemedText className="text-lg font-semibold">{tripData.checkOut}</ThemedText>
+                  <ThemedText className="text-lg font-semibold">{dropOffLabel ?? '—'}</ThemedText>
                   <ThemedText className="text-sm text-light-subtext dark:text-dark-subtext">
-                    Before 11:00 AM
+                    By 6:00 PM
                   </ThemedText>
                 </View>
               </View>
@@ -148,15 +207,15 @@ const TripDetailScreen = () => {
                     Duration
                   </ThemedText>
                   <ThemedText className="text-lg font-semibold">
-                    {tripData.nights} nights
+                    {rentalDays} {rentalDays === 1 ? 'day' : 'days'}
                   </ThemedText>
                 </View>
                 <View className="items-end">
                   <ThemedText className="text-sm text-light-subtext dark:text-dark-subtext">
-                    Guests
+                    Passengers
                   </ThemedText>
                   <ThemedText className="text-lg font-semibold">
-                    {tripData.guests} guests
+                    {passengers ?? vehicle.seats} seats
                   </ThemedText>
                 </View>
               </View>
@@ -165,27 +224,39 @@ const TripDetailScreen = () => {
 
           <Divider className="mt-6 h-2 bg-light-secondary dark:bg-dark-darker" />
 
-          {/* Reservation Details */}
-          <Section title="Reservation details" titleSize="lg" className="px-global pt-4">
+          {/* Booking Details */}
+          <Section title="Booking details" titleSize="lg" className="px-global pt-4">
             <View className="mt-4 space-y-3">
               <View className="flex-row justify-between">
                 <ThemedText className="text-light-subtext dark:text-dark-subtext">
                   Reservation number
                 </ThemedText>
-                <ThemedText className="font-medium">{tripData.reservationNumber}</ThemedText>
+                <ThemedText className="font-medium">{res ?? '#RES-000000'}</ThemedText>
               </View>
 
               <View className="flex-row justify-between">
                 <ThemedText className="text-light-subtext dark:text-dark-subtext">
-                  Guests
+                  Vehicle
                 </ThemedText>
-                <ThemedText className="font-medium">{tripData.guests} guests</ThemedText>
+                <ThemedText className="font-medium">
+                  {vehicle.make} {vehicle.model} • {vehicle.color} • {vehicle.transmission}
+                </ThemedText>
+              </View>
+
+              <View className="flex-row justify-between">
+                <ThemedText className="text-light-subtext dark:text-dark-subtext">
+                  Fuel / Type
+                </ThemedText>
+                <ThemedText className="font-medium">
+                  {vehicle.fuelType} • {vehicle.type}
+                </ThemedText>
               </View>
 
               <View className="mt-4">
                 <ThemedText className="mb-2 text-sm font-medium">Cancellation policy</ThemedText>
                 <ThemedText className="text-sm leading-5 text-light-subtext dark:text-dark-subtext">
-                  {tripData.cancellationPolicy}
+                  Free cancellation up to 48 hours before pick-up. A partial refund may apply after
+                  that window based on owner settings.
                 </ThemedText>
               </View>
             </View>
@@ -198,101 +269,83 @@ const TripDetailScreen = () => {
             <View className="mt-4 space-y-3">
               <View className="flex-row justify-between">
                 <ThemedText className="text-light-subtext dark:text-dark-subtext">
-                  {tripData.priceBreakdown.nightlyRate} x {tripData.priceBreakdown.nights} nights
+                  R {dailyRate} × {rentalDays} {rentalDays === 1 ? 'day' : 'days'}
                 </ThemedText>
-                <ThemedText>{tripData.priceBreakdown.subtotal}</ThemedText>
+                <ThemedText>R {subtotal}</ThemedText>
               </View>
 
               <View className="flex-row justify-between">
                 <ThemedText className="text-light-subtext dark:text-dark-subtext">
-                  Cleaning fee
+                  Insurance
                 </ThemedText>
-                <ThemedText>{tripData.priceBreakdown.cleaningFee}</ThemedText>
+                <ThemedText>R {insuranceFee}</ThemedText>
               </View>
 
               <View className="flex-row justify-between">
                 <ThemedText className="text-light-subtext dark:text-dark-subtext">
                   Service fee
                 </ThemedText>
-                <ThemedText>{tripData.priceBreakdown.serviceFee}</ThemedText>
+                <ThemedText>R {serviceFee}</ThemedText>
               </View>
 
               <View className="flex-row justify-between">
                 <ThemedText className="text-light-subtext dark:text-dark-subtext">Taxes</ThemedText>
-                <ThemedText>{tripData.priceBreakdown.taxes}</ThemedText>
+                <ThemedText>R {taxes}</ThemedText>
               </View>
 
               <Divider className="my-3" />
 
               <View className="flex-row justify-between">
                 <ThemedText className="text-lg font-bold">Total</ThemedText>
-                <ThemedText className="text-lg font-bold">
-                  {tripData.priceBreakdown.total}
-                </ThemedText>
+                <ThemedText className="text-lg font-bold">R {totalRands}</ThemedText>
               </View>
             </View>
           </Section>
 
           <Divider className="mt-6 h-2 bg-light-secondary dark:bg-dark-darker" />
 
-          {/* Payment Information */}
-          <Section title="Payment information" titleSize="lg" className="px-global pt-4">
-            <View className="mt-4 flex-row items-center">
-              <Icon name="CreditCard" size={20} className="mr-3" />
-              <View>
-                <ThemedText className="font-medium">
-                  {tripData.paymentMethod.type} •••• {tripData.paymentMethod.lastFour}
-                </ThemedText>
-                <ThemedText className="text-sm text-light-subtext dark:text-dark-subtext">
-                  Charged {tripData.paymentMethod.amount}
-                </ThemedText>
-              </View>
-            </View>
-          </Section>
-
-          <Divider className="mt-6 h-2 bg-light-secondary dark:bg-dark-darker" />
-
-          {/* Rules and Instructions */}
-          <Section title="House rules & instructions" titleSize="lg" className="px-global pt-4">
+          {/* Vehicle Rules & Instructions */}
+          <Section title="Rental rules & instructions" titleSize="lg" className="px-global pt-4">
+            {/* ... (unchanged content) ... */}
             <View className="mt-4 space-y-4">
               <View className="flex-row items-start">
                 <Icon
-                  name="Clock"
+                  name="Fuel"
                   size={16}
                   className="mr-3 mt-1 text-light-subtext dark:text-dark-subtext"
                 />
                 <View>
-                  <ThemedText className="font-medium">Check-in: After 3:00 PM</ThemedText>
+                  <ThemedText className="font-medium">Fuel policy</ThemedText>
                   <ThemedText className="text-sm text-light-subtext dark:text-dark-subtext">
-                    Self check-in with keypad
+                    Return with the same fuel level as at pick-up.
                   </ThemedText>
                 </View>
               </View>
 
               <View className="flex-row items-start">
                 <Icon
-                  name="Users"
+                  name="Gauge"
                   size={16}
                   className="mr-3 mt-1 text-light-subtext dark:text-dark-subtext"
                 />
                 <View>
-                  <ThemedText className="font-medium">Maximum 4 guests</ThemedText>
+                  <ThemedText className="font-medium">Mileage</ThemedText>
                   <ThemedText className="text-sm text-light-subtext dark:text-dark-subtext">
-                    No additional guests allowed
+                    200 km/day included. Additional distance may incur charges.
                   </ThemedText>
                 </View>
               </View>
 
               <View className="flex-row items-start">
                 <Icon
-                  name="Volume2"
+                  name="ShieldCheck"
                   size={16}
                   className="mr-3 mt-1 text-light-subtext dark:text-dark-subtext"
                 />
                 <View>
-                  <ThemedText className="font-medium">Quiet hours: 10:00 PM - 8:00 AM</ThemedText>
+                  <ThemedText className="font-medium">Security deposit</ThemedText>
                   <ThemedText className="text-sm text-light-subtext dark:text-dark-subtext">
-                    Please respect the neighbors
+                    A refundable deposit may be held at pick-up.
                   </ThemedText>
                 </View>
               </View>
@@ -306,7 +359,7 @@ const TripDetailScreen = () => {
                 <View>
                   <ThemedText className="font-medium">No smoking</ThemedText>
                   <ThemedText className="text-sm text-light-subtext dark:text-dark-subtext">
-                    Smoking is not allowed anywhere on the property
+                    Smoking is not permitted in the vehicle.
                   </ThemedText>
                 </View>
               </View>
@@ -316,22 +369,21 @@ const TripDetailScreen = () => {
           <Divider className="mt-6 h-2 bg-light-secondary dark:bg-dark-darker" />
 
           {/* Location */}
-          <Section title="Location" titleSize="lg" className="px-global pb-6 pt-4">
+          <Section title="Pick-up location" titleSize="lg" className="px-global pb-6 pt-4">
             <View className="mt-4">
               <ThemedText className="mb-4 text-light-subtext dark:text-dark-subtext">
-                {tripData.location}
+                {vehicle.locationArea}, Cape Town
               </ThemedText>
 
-              {/* Placeholder for map - you can integrate with react-native-maps */}
-              <View className="h-48 w-full items-center justify-center rounded-xl bg-light-secondary dark:bg-dark-secondary">
-                <Icon
-                  name="Map"
-                  size={48}
-                  className="mb-2 text-light-subtext dark:text-dark-subtext"
-                />
-                <ThemedText className="text-light-subtext dark:text-dark-subtext">
-                  Interactive map coming soon
-                </ThemedText>
+              {/* ✅ Live Map */}
+              <View className="h-48 w-full overflow-hidden rounded-xl">
+                <MapView className="h-full w-full" initialRegion={region}>
+                  <Marker
+                    coordinate={{ latitude: region.latitude, longitude: region.longitude }}
+                    title={vehicle.title}
+                    description={`${vehicle.locationArea}, Cape Town`}
+                  />
+                </MapView>
               </View>
 
               <Button
@@ -339,10 +391,7 @@ const TripDetailScreen = () => {
                 iconStart="ExternalLink"
                 variant="outline"
                 className="mt-4"
-                onPress={() => {
-                  // Open in device maps app
-                  console.log('Open in maps');
-                }}
+                onPress={openInMaps}
               />
             </View>
           </Section>
@@ -352,18 +401,18 @@ const TripDetailScreen = () => {
       <ThemedFooter>
         <View className="flex-row space-x-3">
           <Button
-            title="Review"
+            title="Review vehicle"
             variant="outline"
             iconStart="Star"
             className="flex-1"
-            href="/screens/review"
+            href={reviewHref}
           />
           <Button
-            title="Cancel trip"
+            title="Cancel booking"
             variant="outline"
             iconStart="X"
             className="flex-1"
-            onPress={() => console.log('Cancel trip')}
+            onPress={() => console.log('Cancel booking')}
           />
         </View>
       </ThemedFooter>
@@ -371,4 +420,4 @@ const TripDetailScreen = () => {
   );
 };
 
-export default TripDetailScreen;
+export default RentalDetailScreen;
